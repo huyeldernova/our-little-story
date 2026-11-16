@@ -1,0 +1,83 @@
+# Shared settings. Profile files (application-local.yml, application-prod.yml)
+# add environment-specific values. Every secret comes from an environment variable.
+spring:
+  config:
+    import: "optional:file:.env[.properties],optional:file:../.env[.properties]"
+  application:
+    name: our-little-story
+  profiles:
+    default: local
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/our_little_story?useUnicode=true&characterEncoding=utf8&connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&createDatabaseIfNotExist=true}
+    username: ${DB_USERNAME:}
+    password: ${DB_PASSWORD:}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 11MB
+  jackson:
+    time-zone: UTC
+
+server:
+  port: ${PORT:8080}
+  servlet:
+    session:
+      timeout: 7d
+      cookie:
+        name: OLS_SESSION
+        http-only: true
+        same-site: lax
+        secure: ${SESSION_COOKIE_SECURE:false}
+        max-age: 7d
+  tomcat:
+    max-swallow-size: 12MB
+  error:
+    include-stacktrace: never
+    include-message: never
+
+app:
+  time-zone: ${APP_TIME_ZONE:Asia/Ho_Chi_Minh}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  bootstrap:
+    conversation-title: Our Little Chat
+    reset-passwords: ${OLS_RESET_PASSWORDS:false}
+    create-invitation: ${OLS_CREATE_INVITATION:true}
+    user1:
+      username: ${OLS_USER1_USERNAME:}
+      display-name: ${OLS_USER1_DISPLAY_NAME:}
+      password: ${OLS_USER1_PASSWORD:}
+    user2:
+      username: ${OLS_USER2_USERNAME:}
+      display-name: ${OLS_USER2_DISPLAY_NAME:}
+      password: ${OLS_USER2_PASSWORD:}
+  storage:
+    type: ${STORAGE_TYPE:local}
+    local:
+      directory: ${UPLOAD_DIR:./data/uploads}
+    s3:
+      bucket: ${S3_BUCKET:}
+      region: ${AWS_REGION:}
+      prefix: ${S3_PREFIX:}
+  story:
+    directory: ${OLS_STORY_DIR:}
+  login:
+    max-failures: 5
+    lock-minutes: 15
+  docs:
+    public-access: false
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html

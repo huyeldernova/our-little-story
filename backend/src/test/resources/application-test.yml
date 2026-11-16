@@ -1,0 +1,30 @@
+# Test profile. Uses in-memory H2 (MySQL mode) by default; set TEST_DB_URL,
+# TEST_DB_USERNAME and TEST_DB_PASSWORD to run the same suite against MySQL 8.
+spring:
+  datasource:
+    url: ${TEST_DB_URL:jdbc:h2:mem:ols;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1}
+    username: ${TEST_DB_USERNAME:sa}
+    password: ${TEST_DB_PASSWORD:}
+  flyway:
+    clean-disabled: false
+
+app:
+  cors:
+    allowed-origins: http://localhost:5173
+  bootstrap:
+    user1:
+      username: alice
+      display-name: Alice
+      password: test-only-password-a
+    user2:
+      username: bob
+      display-name: Bob
+      password: test-only-password-b
+  storage:
+    type: local
+    local:
+      directory: ${java.io.tmpdir}/ols-test-uploads
+  story:
+    directory: src/test/resources/story-fixture
+  docs:
+    public-access: true

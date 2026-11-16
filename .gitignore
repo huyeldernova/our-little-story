@@ -1,0 +1,31 @@
+# --- secrets & private content: never commit ---
+.env
+.env.*
+!.env.example
+!frontend/.env.example
+story-private/
+**/story-private/
+*.pem
+*.key
+
+# --- build output ---
+node_modules/
+frontend/dist/
+backend/target/
+*.tsbuildinfo
+
+# --- runtime data ---
+backend/data/
+data/
+uploads/
+*.log
+e2e-shots/
+ols-e2e-shots/
+
+# --- IDE / OS ---
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db

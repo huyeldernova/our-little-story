@@ -1,0 +1,18 @@
+# Local development: backend on :8080, Vite dev server on :5173 (it proxies /api and /ws).
+# Database credentials still come from env vars (see backend/.env.example).
+spring:
+  datasource:
+    username: ${DB_USERNAME:ols_app}
+
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
+  story:
+    # Falls back to the placeholder story shipped in the repo.
+    directory: ${OLS_STORY_DIR:../story-example}
+  docs:
+    public-access: true
+
+logging:
+  level:
+    com.ourlittlestory: DEBUG
