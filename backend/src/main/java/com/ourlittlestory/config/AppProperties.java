@@ -20,7 +20,7 @@ public record AppProperties(
         if (cors == null) cors = new Cors(List.of());
         if (bootstrap == null) bootstrap = new Bootstrap(null, null, false, "Our Little Chat", true);
         if (storage == null) storage = new Storage("local", null, null);
-        if (story == null) story = new Story(null);
+        if (story == null) story = new Story(null, null);
         if (docs == null) docs = new Docs(false);
         if (login == null) login = new Login(5, 15);
     }
@@ -61,8 +61,11 @@ public record AppProperties(
     public record S3(String bucket, String region, String prefix) {
     }
 
-    /** Directory that holds the private story content (story.json + assets/). */
-    public record Story(String directory) {
+    /**
+     * Directory that holds the private story content (story.json + assets/), and an optional
+     * fallback (the public placeholder story) used while the private content is missing.
+     */
+    public record Story(String directory, String fallbackDirectory) {
     }
 
     public record Docs(boolean publicAccess) {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type MouseEvent, type PointerEvent } from 'react'
-import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import { useIsAdmin } from '../auth/useIsAdmin'
 import { InvitationSession } from '../chapters/invitation/InvitationSession'
 import { ChatSession } from '../chat/ChatSession'
 import ChatChapter from '../chapters/ChatChapter'
@@ -57,6 +58,7 @@ export default function StoryLayout() {
   const { story, error, t } = useStory()
   const music = useMusic()
   const { logout, user } = useAuth()
+  const isAdmin = useIsAdmin()
   const page = Math.min(LAST, Math.max(0, (Number(chapter) || 1) - 1))
   const [dir, setDir] = useState<'next' | 'prev'>('next')
   const [sheet, setSheet] = useState(false)
@@ -193,6 +195,7 @@ export default function StoryLayout() {
         go={go}
         t={t}
         userName={user?.displayName}
+        isAdmin={isAdmin}
         onLogout={() => void logout()}
         overlays={
           <>
@@ -295,6 +298,11 @@ export default function StoryLayout() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
                 <span style={{ fontSize: 11, color: '#6B6158' }}>{user?.displayName}</span>
+                {isAdmin && (
+                  <Link to="/admin/story" style={{ marginLeft: 'auto', minHeight: 40, display: 'inline-flex', alignItems: 'center', padding: '0 8px', color: '#6B6158', fontSize: 11, letterSpacing: '.12em' }}>
+                    NỘI DUNG
+                  </Link>
+                )}
                 <button type="button" onClick={() => void logout()} style={{ minHeight: 40, padding: '0 12px', border: 0, background: 'transparent', color: '#39342F', fontSize: 11, letterSpacing: '.16em', textDecoration: 'underline', cursor: 'pointer' }}>
                   ĐĂNG XUẤT
                 </button>

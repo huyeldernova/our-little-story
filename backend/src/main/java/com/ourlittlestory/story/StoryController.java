@@ -1,7 +1,6 @@
 package com.ourlittlestory.story;
 
 import com.ourlittlestory.common.ApiException;
-import com.ourlittlestory.config.AppProperties;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.io.IOException;
@@ -42,10 +41,10 @@ public class StoryController {
             "mp3", MediaType.parseMediaType("audio/mpeg"), "m4a", MediaType.parseMediaType("audio/mp4"),
             "ogg", MediaType.parseMediaType("audio/ogg"));
 
-    private final AppProperties props;
+    private final StoryLocation location;
 
-    public StoryController(AppProperties props) {
-        this.props = props;
+    public StoryController(StoryLocation location) {
+        this.location = location;
     }
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
@@ -81,10 +80,6 @@ public class StoryController {
     }
 
     private Path root() {
-        String dir = props.story().directory();
-        if (dir == null || dir.isBlank()) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "STORY_NOT_CONFIGURED", "Story directory is not configured");
-        }
-        return Path.of(dir).toAbsolutePath().normalize();
+        return location.current();
     }
 }

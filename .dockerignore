@@ -1,0 +1,19 @@
+# Keep the build context small and free of secrets / private content.
+.git
+**/node_modules
+**/dist
+**/target
+.env
+.env.*
+**/.env
+**/.env.*
+story-private
+**/story-private
+backend/data
+data
+uploads
+e2e-shots
+ols-e2e-shots
+*.log
+.idea
+.vscode

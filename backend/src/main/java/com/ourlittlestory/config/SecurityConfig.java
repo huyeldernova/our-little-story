@@ -93,6 +93,9 @@ public class SecurityConfig {
                     auth.requestMatchers(HttpMethod.GET, "/api/auth/csrf").permitAll();
                     auth.requestMatchers(HttpMethod.GET, "/api/health").permitAll();
                     auth.requestMatchers("/error").permitAll();
+                    // The bundled single-page app (single-service deploy). Its data still needs a session.
+                    auth.requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**", "/favicon.svg",
+                            "/login", "/story/**", "/admin/**").permitAll();
                     if (docsPublic) {
                         auth.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll();
                     }

@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 import { AuthProvider, useAuth } from './auth/AuthContext'
 import StoryLayout from './layout/StoryLayout'
 import { MusicProvider } from './music/MusicContext'
+import AdminStoryPage from './pages/AdminStoryPage'
 import LoginPage from './pages/LoginPage'
 import { StoryProvider, useStory } from './story/StoryContext'
 
@@ -44,6 +45,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/story/*" element={<PrivateBook />} />
+          <Route path="/admin/story" element={<RequireAuth><AdminStoryPage /></RequireAuth>} />
           <Route path="*" element={<Navigate to="/story/1" replace />} />
         </Routes>
       </AuthProvider>

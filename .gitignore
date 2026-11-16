@@ -12,6 +12,8 @@ story-private/
 node_modules/
 frontend/dist/
 backend/target/
+# frontend copied into the jar for the single-service build (Dockerfile) — never committed
+backend/src/main/resources/static/
 *.tsbuildinfo
 
 # --- runtime data ---

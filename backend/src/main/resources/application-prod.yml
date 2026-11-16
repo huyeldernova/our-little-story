@@ -1,5 +1,5 @@
-# Production (EC2 behind nginx/HTTPS). All values come from the environment;
-# see docs/DEPLOYMENT.md. The app refuses to start without DB credentials.
+# Production: Railway (single service, see docs/DEPLOY_RAILWAY.md) or EC2 behind nginx/HTTPS
+# (docs/DEPLOYMENT.md). All values come from the environment. The app refuses to start without DB credentials.
 spring:
   datasource:
     url: ${DB_URL}
@@ -9,6 +9,8 @@ spring:
       maximum-pool-size: 10
 
 server:
+  port: ${PORT:8080}
+  # Railway / nginx terminate HTTPS and send X-Forwarded-Proto: needed for Secure cookies and same-origin checks.
   forward-headers-strategy: native
   servlet:
     session:
@@ -18,9 +20,15 @@ server:
 
 app:
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS}
+    # Single-service Railway deploy: the app's own public domain (also used for the WebSocket Origin check).
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://${RAILWAY_PUBLIC_DOMAIN:localhost}}
+  storage:
+    local:
+      directory: ${UPLOAD_DIR:/data/uploads}
   story:
-    directory: ${OLS_STORY_DIR}
+    directory: ${OLS_STORY_DIR:/data/story}
+    # Placeholder story baked into the Docker image, served until the private content is uploaded.
+    fallback-directory: ${OLS_STORY_FALLBACK_DIR:/app/story-example}
   docs:
     public-access: false
 

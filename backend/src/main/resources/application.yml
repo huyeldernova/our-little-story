@@ -24,8 +24,9 @@ spring:
     locations: classpath:db/migration
   servlet:
     multipart:
-      max-file-size: 10MB
-      max-request-size: 11MB
+      # 60 MB for the author's story .zip; chat images are still limited to 10 MB by ImageValidator.
+      max-file-size: 60MB
+      max-request-size: 61MB
   jackson:
     time-zone: UTC
 
@@ -41,7 +42,7 @@ server:
         secure: ${SESSION_COOKIE_SECURE:false}
         max-age: 7d
   tomcat:
-    max-swallow-size: 12MB
+    max-swallow-size: 62MB
   error:
     include-stacktrace: never
     include-message: never
@@ -72,6 +73,7 @@ app:
       prefix: ${S3_PREFIX:}
   story:
     directory: ${OLS_STORY_DIR:}
+    fallback-directory: ${OLS_STORY_FALLBACK_DIR:}
   login:
     max-failures: 5
     lock-minutes: 15

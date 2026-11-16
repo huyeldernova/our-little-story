@@ -184,18 +184,12 @@ Backend jar: `cd backend && mvn package` → `target/our-little-story-backend-1.
   against a real bucket (no AWS access was used).
 - No push notifications (by design).
 
-## 13. Future AWS deployment
+## 13. Deployment
 
-Summary (full guide with nginx and systemd files: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)):
+**Railway, one service (recommended):** Spring Boot serves the API, the WebSocket and the built
+React app on one domain; MySQL and a volume for uploads/story content live in the same Railway
+project. Step-by-step guide, environment variables and how to upload the private story content:
+[docs/DEPLOY_RAILWAY.md](docs/DEPLOY_RAILWAY.md).
 
-1. **Domain**: put both apps under one registrable domain, e.g. `story.example.com` (Vercel) and
-   `api.story.example.com` (EC2), so the `SameSite=Lax` session cookie works in every browser.
-2. **RDS**: create MySQL 8 (private subnet), database `our_little_story`, utf8mb4.
-3. **S3**: private bucket, block public access; EC2 instance role with
-   `s3:PutObject/GetObject/DeleteObject` on that bucket; set `STORAGE_TYPE=s3`.
-4. **EC2**: Java 21, `java -jar` under systemd with `SPRING_PROFILES_ACTIVE=prod` and the env vars
-   from `.env.example` (DB from RDS, `CORS_ALLOWED_ORIGINS=https://story.example.com`,
-   `OLS_STORY_DIR=/opt/ols/story-private`), nginx in front with HTTPS (Let's Encrypt) and
-   WebSocket upgrade for `/ws`.
-5. **Vercel**: import `frontend/`, set `VITE_API_BASE_URL=https://api.story.example.com`.
-6. Copy the private story folder to the server (never to Git).
+**AWS (EC2 + RDS + S3, frontend on Vercel):** full guide with nginx and systemd files in
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).

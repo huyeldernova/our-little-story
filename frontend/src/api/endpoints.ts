@@ -62,3 +62,14 @@ export const invitationApi = {
 export const storyApi = {
   load: () => api<unknown>('/api/story'),
 }
+
+export const adminApi = {
+  /** Whether the signed-in user is the story author (may upload the story content). */
+  status: () => api<{ admin: boolean }>('/api/admin/status'),
+  /** Replaces the private story content with a .zip (story.json + assets/). Author only. */
+  uploadStory: (file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return api<{ files: number; assets: number }>('/api/admin/story', { method: 'POST', form })
+  },
+}

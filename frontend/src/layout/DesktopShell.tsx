@@ -1,4 +1,5 @@
 import type { MouseEvent, ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 
 type Props = {
   page: number
@@ -8,6 +9,8 @@ type Props = {
   go: (index: number) => void
   t: (key: string) => string
   userName?: string
+  /** The story author sees a small link to /admin/story next to the logout button. */
+  isAdmin?: boolean
   onLogout: () => void
   /** The chapter view (desktop layout, or the framed mobile page while a desktop layout is missing). */
   children: ReactNode
@@ -22,7 +25,7 @@ const pad = (n: number) => String(n).padStart(2, '0')
  * indicator on the right (.ch-ind, as in the 1440px canvases) and ← / → at the end of
  * every chapter. No swipe or tap zones here; the arrow keys are handled by StoryLayout.
  */
-export default function DesktopShell({ page, dark = false, titles, go, t, userName, onLogout, children, overlays }: Props) {
+export default function DesktopShell({ page, dark = false, titles, go, t, userName, isAdmin = false, onLogout, children, overlays }: Props) {
   const link = (i: number) => (e: MouseEvent) => {
     e.preventDefault()
     go(i)
@@ -60,6 +63,7 @@ export default function DesktopShell({ page, dark = false, titles, go, t, userNa
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 11, color: c.muted }}>
           {userName && <span>{userName}</span>}
+          {isAdmin && <Link to="/admin/story" style={{ color: c.muted, fontSize: 11, letterSpacing: '.12em' }}>NỘI DUNG</Link>}
           <button type="button" onClick={onLogout} style={{ minHeight: 40, padding: '0 8px', border: 0, background: 'transparent', color: c.fg, fontSize: 11, letterSpacing: '.16em', textDecoration: 'underline', cursor: 'pointer' }}>
             {t('d00.001')}
           </button>
