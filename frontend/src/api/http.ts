@@ -20,6 +20,25 @@ export class ApiError extends Error {
   }
 }
 
+export const BACKEND_UNAVAILABLE = 'BACKEND_UNAVAILABLE'
+
+/** The backend is unreachable or something else (e.g. a static host's index.html) answered instead. */
+export function backendUnavailable(): ApiError {
+  return new ApiError(503, BACKEND_UNAVAILABLE, 'Không kết nối được máy chủ. Thử lại sau nhé.')
+}
+
+const isJson = (res: Response) => (res.headers.get('Content-Type') ?? '').includes('json')
+
+/** fetch() that turns network failures (not aborts) into BACKEND_UNAVAILABLE. */
+async function fetchApi(url: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, init)
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') throw e
+    throw backendUnavailable()
+  }
+}
+
 let csrf: { header: string; token: string } | null = null
 let csrfPromise: Promise<void> | null = null
 
@@ -31,8 +50,9 @@ export function resetCsrf(): void {
 async function loadCsrf(): Promise<void> {
   if (csrf) return
   if (!csrfPromise) {
-    csrfPromise = fetch(`${API_BASE}/api/auth/csrf`, { credentials: 'include' })
+    csrfPromise = fetchApi(`${API_BASE}/api/auth/csrf`, { credentials: 'include' })
       .then(async (r) => {
+        if (!isJson(r)) throw backendUnavailable()
         if (!r.ok) throw new ApiError(r.status, 'CSRF', 'Could not start a secure session')
         const body = (await r.json()) as { headerName: string; token: string }
         csrf = { header: body.headerName, token: body.token }
@@ -68,7 +88,7 @@ export async function api<T>(path: string, opts: Options = {}, retried = false):
     headers['Content-Type'] = 'application/json'
     body = JSON.stringify(opts.body)
   }
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetchApi(`${API_BASE}${path}`, {
     method,
     headers,
     body,
@@ -81,6 +101,8 @@ export async function api<T>(path: string, opts: Options = {}, retried = false):
     return api<T>(path, opts, true)
   }
   if (!res.ok) {
+    // An error page that is not our JSON error body means the backend did not answer.
+    if (res.status !== 401 && res.status !== 403 && !isJson(res)) throw backendUnavailable()
     let code = 'HTTP_' + res.status
     let message = 'Đã có lỗi xảy ra, thử lại sau nhé.'
     let fieldErrors: Record<string, string> | undefined
@@ -95,8 +117,9 @@ export async function api<T>(path: string, opts: Options = {}, retried = false):
     throw new ApiError(res.status, code, message, fieldErrors)
   }
   if (res.status === 204) return undefined as T
-  const type = res.headers.get('Content-Type') ?? ''
-  return (type.includes('json') ? await res.json() : await res.text()) as T
+  // Every /api endpoint answers JSON; anything else (e.g. index.html from a SPA rewrite) is not our backend.
+  if (!isJson(res)) throw backendUnavailable()
+  return (await res.json()) as T
 }
 
 /** Absolute URL for a backend path (used by <img src>, which sends cookies automatically). */

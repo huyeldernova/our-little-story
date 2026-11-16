@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
-import { ApiError } from '../api/http'
+import { ApiError, BACKEND_UNAVAILABLE } from '../api/http'
 import { useAuth } from '../auth/AuthContext'
 
 const field = {
@@ -31,7 +31,9 @@ export default function LoginPage() {
     } catch (err) {
       setError(
         err instanceof ApiError
-          ? err.status === 401
+          ? err.code === BACKEND_UNAVAILABLE
+            ? err.message
+            : err.status === 401
             ? 'Sai tên đăng nhập hoặc mật khẩu.'
             : err.message
           : 'Không kết nối được tới máy chủ.',
