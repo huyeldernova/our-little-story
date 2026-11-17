@@ -2,9 +2,14 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 
 /**
  * Background music through the official YouTube IFrame Player API.
- * - Nothing loads or plays until the user presses "Open our story" (or the play button).
+ * - Nothing PLAYS until the user presses "Open our story" (or the play button). The player itself
+ *   is created (cued, autoplay off, silent) as soon as the video id is known after sign-in, so the
+ *   first click can call playVideo() synchronously: Safari / iOS only allow playback that starts
+ *   inside the user gesture, not later in an async onReady callback.
  * - The player lives above the router, so it keeps playing across chapters.
- * - If the browser blocks autoplay we show a gentle "tap to play" state.
+ * - If the browser still blocks playback (or the click came before the player was ready) we show
+ *   "tap to play": that next tap is a fresh user gesture and plays synchronously.
+ * - iOS ignores setVolume(): no fade-in there and no volume slider, only mute / unmute.
  * Audio is never downloaded or extracted: the video is played by YouTube's own
  * embedded player (hidden), which is what the embed terms allow.
  */
@@ -38,7 +43,9 @@ type MusicState = {
   status: MusicStatus
   muted: boolean
   volume: number
-  /** Call from a click handler: loads the player (first time) and starts playback. */
+  /** False on iOS, where the page cannot set the volume (only mute / unmute). */
+  canSetVolume: boolean
+  /** Call from a click handler: starts playback synchronously (or shows "tap to play"). */
   start: () => void
   toggle: () => void
   toggleMute: () => void
@@ -46,6 +53,12 @@ type MusicState = {
 }
 
 const MusicContext = createContext<MusicState | null>(null)
+
+/** iPhone / iPod / iPad, including iPadOS that reports itself as a Mac. */
+// eslint-disable-next-line react-refresh/only-export-components
+export const IS_IOS: boolean =
+  typeof navigator !== 'undefined' &&
+  (/iPad|iPhone|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1))
 const TARGET_VOLUME_DEFAULT = 55
 const FADE_MS = 2500
 
@@ -83,17 +96,24 @@ export function MusicProvider({ videoId, children }: { videoId?: string; childre
   })
   const hostRef = useRef<HTMLDivElement | null>(null)
   const playerRef = useRef<YTPlayer | null>(null)
+  const readyRef = useRef(false)
+  /** The user asked to play before the player was ready: show "tap to play" on ready. */
+  const wantPlayRef = useRef(false)
   const ytRef = useRef<YTNamespace | null>(null)
   const fadeRef = useRef<number | undefined>(undefined)
   const blockTimer = useRef<number | undefined>(undefined)
   const volumeRef = useRef(volume)
+  const mutedRef = useRef(muted)
   useEffect(() => {
     volumeRef.current = volume
   }, [volume])
+  useEffect(() => {
+    mutedRef.current = muted
+  }, [muted])
 
   const fadeIn = useCallback(() => {
     const p = playerRef.current
-    if (!p) return
+    if (!p || IS_IOS) return // iOS ignores setVolume
     window.clearInterval(fadeRef.current)
     let v = 0
     p.setVolume(0)
@@ -116,83 +136,95 @@ export function MusicProvider({ videoId, children }: { videoId?: string; childre
     }, 1800)
   }, [])
 
-  const createPlayer = useCallback(async () => {
+  // Create (cue) the player as soon as the video id is known. autoplay: 0 — this loads the
+  // player only; no sound until the user's click calls playVideo().
+  useEffect(() => {
+    if (!videoId) return
+    let cancelled = false
+    loadYouTubeApi()
+      .then((YT) => {
+        if (cancelled || !hostRef.current || playerRef.current) return
+        ytRef.current = YT
+        const el = document.createElement('div')
+        hostRef.current.appendChild(el)
+        playerRef.current = new YT.Player(el, {
+          width: 200,
+          height: 200,
+          videoId,
+          playerVars: { autoplay: 0, controls: 0, disablekb: 1, fs: 0, loop: 1, playlist: videoId, modestbranding: 1, rel: 0, playsinline: 1 },
+          events: {
+            onReady: () => {
+              readyRef.current = true
+              // Never auto-play here (it would be outside the user gesture on Safari):
+              // if the user already clicked, ask for one more tap.
+              if (wantPlayRef.current) setStatus('blocked')
+            },
+            onStateChange: (e: { data: number }) => {
+              if (e.data === YT.PlayerState.PLAYING) {
+                wantPlayRef.current = false
+                setStatus('playing')
+              } else if (e.data === YT.PlayerState.PAUSED) setStatus((s) => (s === 'blocked' ? s : 'paused'))
+              else if (e.data === YT.PlayerState.ENDED) {
+                playerRef.current?.seekTo(0, true)
+                playerRef.current?.playVideo()
+              }
+            },
+            onError: () => setStatus('unavailable'),
+          },
+        })
+      })
+      .catch(() => {
+        if (!cancelled) setStatus('unavailable')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [videoId])
+
+  /** Plays synchronously — must be called directly from a click / tap handler. */
+  const playNow = useCallback(() => {
+    const p = playerRef.current
     if (!videoId) {
       setStatus('unavailable')
       return
     }
-    setStatus('loading')
-    try {
-      const YT = await loadYouTubeApi()
-      ytRef.current = YT
-      if (!hostRef.current || playerRef.current) return
-      const el = document.createElement('div')
-      hostRef.current.appendChild(el)
-      playerRef.current = new YT.Player(el, {
-        width: 200,
-        height: 200,
-        videoId,
-        playerVars: { autoplay: 1, controls: 0, disablekb: 1, fs: 0, loop: 1, playlist: videoId, modestbranding: 1, rel: 0, playsinline: 1 },
-        events: {
-          onReady: () => {
-            playerRef.current?.playVideo()
-            fadeIn()
-            watchForBlock()
-          },
-          onStateChange: (e: { data: number }) => {
-            if (e.data === YT.PlayerState.PLAYING) setStatus('playing')
-            else if (e.data === YT.PlayerState.PAUSED) setStatus((s) => (s === 'blocked' ? s : 'paused'))
-            else if (e.data === YT.PlayerState.ENDED) {
-              playerRef.current?.seekTo(0, true)
-              playerRef.current?.playVideo()
-            }
-          },
-          onError: () => setStatus('unavailable'),
-        },
-      })
-    } catch {
-      setStatus('unavailable')
+    if (!p || !readyRef.current) {
+      wantPlayRef.current = true
+      setStatus('loading')
+      return
     }
+    if (mutedRef.current) p.mute()
+    else p.unMute()
+    p.playVideo() // synchronous, inside the user gesture
+    fadeIn() // after playVideo
+    watchForBlock()
   }, [videoId, fadeIn, watchForBlock])
 
   const start = useCallback(() => {
     setStarted(true)
-    const p = playerRef.current
-    if (!p) {
-      void createPlayer()
-      return
-    }
-    p.playVideo()
-    fadeIn()
-    watchForBlock()
-  }, [createPlayer, fadeIn, watchForBlock])
+    playNow()
+  }, [playNow])
 
   const toggle = useCallback(() => {
     const p = playerRef.current
-    if (!p) {
-      start()
-      return
-    }
-    if (status === 'playing') {
+    if (p && readyRef.current && status === 'playing') {
       p.pauseVideo()
       setStatus('paused')
-    } else {
-      p.playVideo()
-      fadeIn()
-      watchForBlock()
+      return
     }
-  }, [status, start, fadeIn, watchForBlock])
+    setStarted(true)
+    playNow()
+  }, [status, playNow])
 
   const toggleMute = useCallback(() => {
-    setMuted((m) => {
-      const next = !m
-      const p = playerRef.current
-      if (p) {
-        if (next) p.mute()
-        else p.unMute()
-      }
-      return next
-    })
+    const next = !mutedRef.current
+    const p = playerRef.current
+    if (p && readyRef.current) {
+      if (next) p.mute()
+      else p.unMute()
+    }
+    mutedRef.current = next
+    setMuted(next)
   }, [])
 
   const setVolume = useCallback((v: number) => {
@@ -201,11 +233,12 @@ export function MusicProvider({ videoId, children }: { videoId?: string; childre
     sessionStorageSet('ols-volume', String(clamped))
     window.clearInterval(fadeRef.current)
     playerRef.current?.setVolume(clamped)
-    if (clamped > 0 && muted) {
+    if (clamped > 0 && mutedRef.current) {
       playerRef.current?.unMute()
+      mutedRef.current = false
       setMuted(false)
     }
-  }, [muted])
+  }, [])
 
   useEffect(
     () => () => {
@@ -213,23 +246,25 @@ export function MusicProvider({ videoId, children }: { videoId?: string; childre
       window.clearTimeout(blockTimer.current)
       playerRef.current?.destroy()
       playerRef.current = null
+      readyRef.current = false
     },
     [],
   )
 
   const value = useMemo(
-    () => ({ started, status, muted, volume, start, toggle, toggleMute, setVolume }),
+    () => ({ started, status, muted, volume, canSetVolume: !IS_IOS, start, toggle, toggleMute, setVolume }),
     [started, status, muted, volume, start, toggle, toggleMute, setVolume],
   )
 
   return (
     <MusicContext.Provider value={value}>
       {children}
-      {/* Off-screen host for the YouTube player (must not be display:none or it won't play). */}
+      {/* Host for the YouTube player: inside the viewport (iOS may refuse to play off-screen video),
+          practically invisible, never display:none. */}
       <div
         ref={hostRef}
         aria-hidden="true"
-        style={{ position: 'fixed', left: -9999, top: -9999, width: 200, height: 200, opacity: 0, pointerEvents: 'none' }}
+        style={{ position: 'fixed', left: 0, bottom: 0, width: 2, height: 2, overflow: 'hidden', opacity: 0.01, pointerEvents: 'none', zIndex: -1 }}
       />
     </MusicContext.Provider>
   )

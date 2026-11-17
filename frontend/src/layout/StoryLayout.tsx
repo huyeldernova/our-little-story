@@ -288,10 +288,15 @@ export default function StoryLayout() {
                 </button>
               ))}
               <div style={{ borderTop: '1px solid #E6D8C5', paddingTop: 12, marginTop: 4, display: 'flex', alignItems: 'center', gap: 12 }}>
-                <label style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, fontSize: 10, letterSpacing: '.2em', color: '#6B6158' }}>
-                  ÂM LƯỢNG
-                  <input className="vol" type="range" min={0} max={100} value={music.muted ? 0 : music.volume} onChange={(e) => music.setVolume(Number(e.target.value))} aria-label="Music volume" style={{ flex: 1 }} />
-                </label>
+                {music.canSetVolume ? (
+                  <label style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, fontSize: 10, letterSpacing: '.2em', color: '#6B6158' }}>
+                    ÂM LƯỢNG
+                    <input className="vol" type="range" min={0} max={100} value={music.muted ? 0 : music.volume} onChange={(e) => music.setVolume(Number(e.target.value))} aria-label="Music volume" style={{ flex: 1 }} />
+                  </label>
+                ) : (
+                  // iOS ignores page volume: only mute / unmute (in the header).
+                  <span style={{ flex: 1 }} />
+                )}
                 {!music.started && story.music?.youtubeVideoId && (
                   <button type="button" onClick={music.start} style={{ minHeight: 40, padding: '0 12px', border: '1px solid #CDBBA3', background: 'transparent', fontSize: 11, letterSpacing: '.14em', cursor: 'pointer' }}>PLAY</button>
                 )}

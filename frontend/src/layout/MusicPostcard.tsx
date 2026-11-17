@@ -52,7 +52,7 @@ export default function MusicPostcard({ t, title }: Props) {
               <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z" /><path d="M17 9a4 4 0 0 1 0 6M19.5 6.5a8 8 0 0 1 0 11" /></svg>
             )}
           </button>
-          <input className="vol" type="range" min={0} max={100} value={music.muted ? 0 : music.volume} onChange={(e) => music.setVolume(Number(e.target.value))} aria-label="Music volume" style={{ width: 84, margin: '0 4px 0 0' }} />
+          {music.canSetVolume && <input className="vol" type="range" min={0} max={100} value={music.muted ? 0 : music.volume} onChange={(e) => music.setVolume(Number(e.target.value))} aria-label="Music volume" style={{ width: 84, margin: '0 4px 0 0' }} />}
         </>
       )}
     </div>
